@@ -8,3 +8,8 @@ __pycache__/
 *.db
 *.sqlite
 *.log 
+.bookgpt
+.bookgpt/ 
+**/__pycache__/
+*.pyc
+.venv/
