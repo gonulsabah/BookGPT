@@ -1,0 +1,1 @@
+BOOK_EMBEDDINGS_PATH = "data/book_embeddings.npy"
