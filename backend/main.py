@@ -1,7 +1,6 @@
 import faiss
 import pandas as pd
-from fastapi import FastAPI, Request, HTTPException
-from sympy import im
+from fastapi import FastAPI, HTTPException, Request
 
 # Kendi yazdığınız servisleri import ediyoruz
 from services import search, translator as translator_module
@@ -16,12 +15,12 @@ def init_resources():
     """Modelleri ve verileri SADECE ilk istek geldiğinde yükler."""
     global bot_translator
 
-    # Eğer daha önce yüklendiyse tekrar yükleme yapma
     if bot_translator is not None:
         return
 
     print(
-        "⚠️  [LAZY LOADING] İlk istek geldi, modeller şimdi hafızaya yükleniyor...")
+        "⚠️  [LAZY LOADING] İlk istek geldi, modeller şimdi hafızaya yükleniyor..."
+    )
 
     try:
         # 1. Çeviri Modelini Yükle
@@ -46,21 +45,17 @@ def init_resources():
 
 @app.get("/")
 def home():
-    """Burası hiçbir modele dokunmadığı için SALİSELER İÇİNDE cevap verecek!"""
     return {
         "status": "online",
-        "message": "FastAPI tamamen aktif! Öneri almak için /recommend endpoint'ini kullanın."
+        "message": "FastAPI tamamen aktif! Öneri almak için /recommend endpoint'ini kullanın.",
     }
 
 
 @app.get("/recommend")
 def recommend(query: str, top_k: int = 5):
     """İlk çağrıldığında modelleri yükler, sonraki çağrılarda direkt çalışır."""
-    # 1. Önce docstring gelmeli!
-    # 2. Şimdi ipdb breakpoint'inizi koyabilirsiniz:
     global bot_translator
 
-    # Modeller yüklü değilse tam şu an yüklemesini tetikliyoruz
     if bot_translator is None:
         init_resources()
 
