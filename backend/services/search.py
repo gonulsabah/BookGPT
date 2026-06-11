@@ -1,40 +1,35 @@
-import numpy as np
-import pandas as pd
 import faiss
+import pandas as pd
+from .embedding import create_embedding
 
-from services.embedding import create_embedding
-# from services.translator import translate_query
-
-
-# Load once
-books = pd.read_csv("data/books.csv")
-index = faiss.read_index("data/books.faiss")
+# Bunlar main.py içindeki lifespan tarafından doldurulacak, başlangıçta None kalabilir
+books = None
+index = None
 
 
-def hybrid_book_recommendation(query, top_k=5, alpha=0.7, beta=0.3):
+def hybrid_book_recommendation(query: str, translator, top_k: int = 5, alpha: float = 0.7, beta: float = 0.3):
     """
-    alpha:
-        semantic similarity ağırlığı
+    alpha: semantic similarity ağırlığı
+    beta: rating/popularity ağırlığı
 
-    beta:
-        rating/popularity ağırlığı
+    NOT: translator nesnesini artık parametre olarak dışarıdan (main.py - app.state) alıyoruz.
     """
 
-    # ürkçe -> İngilizce
-    # english_query = translate_query(query)
-    english_query = query
+    # Türkçe -> İngilizce (Dışarıdan gelen translator nesnesini kullanıyoruz)
+    english_query = translator.translate_tr_to_en(query)
+
     # Query embedding
     query_vector = create_embedding(english_query)
 
-    # 3) FAISS search
+    # FAISS search
     candidate_count = min(30, len(books))
-
     distances, indices = index.search(query_vector, candidate_count)
 
     results = []
-
     for score, idx in zip(distances[0], indices[0]):
-        row = books.iloc[idx]
+        if idx == -1 or idx >= len(books):
+            continue
+        row = books.iloc[int(idx)]
         semantic_score = float(score)
         ml_score = float(row["normalized_ml_score"])
 
@@ -52,10 +47,6 @@ def hybrid_book_recommendation(query, top_k=5, alpha=0.7, beta=0.3):
         })
 
     result_df = pd.DataFrame(results)
-
-    result_df = result_df.sort_values(
-        "final_score",
-        ascending=False
-    )
+    result_df = result_df.sort_values("final_score", ascending=False)
 
     return result_df.head(top_k)
