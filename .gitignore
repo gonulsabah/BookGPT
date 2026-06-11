@@ -1,6 +1,8 @@
 .venv/
 *.ipynb
-*.ipynb_checkpoints
+*.bin
+*.json
+*.ipynb_checkpoints/
 __pycache__/
 *.pyc
 *.pyo
