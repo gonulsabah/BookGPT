@@ -20,12 +20,8 @@ class FlawlessTranslator:
             detected_lang = detect(text)
 
             if detected_lang == "en":
-                print(f"[Dil: İngilizce] -> Türkçeye çevriliyor...")
-                translated = GoogleTranslator(source="en", target="tr").translate(
-                    text
-                )
-                print(f"Çeviri Sonucu (EN->TR): {translated}")
-                return translated
+                print(f"[Dil: İngilizce]")
+                return text
             else:
                 print(f"[Dil: Türkçe] -> İngilizceye çevriliyor...")
                 translated = GoogleTranslator(source="tr", target="en").translate(
