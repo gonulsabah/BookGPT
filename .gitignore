@@ -10,3 +10,5 @@ __pycache__/
 *.db
 *.sqlite
 *.log 
+backend/ubuntu-env/
+backend/bookgpt-env/
