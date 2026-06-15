@@ -1,6 +1,7 @@
 import faiss
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Request
+from pydantic import BaseModel
 
 # Kendi yazdığınız servisleri import ediyoruz
 from services import search, translator as translator_module
@@ -8,6 +9,9 @@ from services import search, translator as translator_module
 app = FastAPI(title="BookGPT API")
 
 bot_translator = None
+
+class LanguageDetectionRequest(BaseModel):
+    text: str
 
 
 def init_resources():
@@ -66,4 +70,26 @@ def recommend(query: str, top_k: int = 5, alpha: float = 0.7, beta: float = 0.3)
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Öneri üretilirken hata oluştu: {str(e)}"
+        )
+    
+@app.post("/detect-language")
+def detect_language(request: LanguageDetectionRequest):
+    global bot_translator
+
+    if bot_translator is None:
+        init_resources()
+
+    if not request.text or not request.text.strip():
+        raise HTTPException(status_code=400, detail="Metin boş olamaz.")
+    
+    try:
+        lang = bot_translator.detect_language(request.text)
+        return {
+            "text": request.text,
+            "detected_language": lang,
+            "status": "success" if lang != "unknown" else "failed"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Dil tespiti sırasında hata oluştu: {str(e)}"
         )
