@@ -1,7 +1,9 @@
-import streamlit as st
+import os
 import requests
+import streamlit as st
 from datetime import datetime
 
+BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8080")
 
 st.set_page_config(
     page_title="BookGPT | Akıllı Kitap Öneri Sistemi",
@@ -17,25 +19,32 @@ if "search_query_val" not in st.session_state:
 # SIDEBAR (KULLANICI PANELİ) TASARIMI
 # ==========================================
 with st.sidebar:
-    st.markdown("<h2 style='color: #E5A93C;'>📊 Kullanıcı Paneli</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color: #E5A93C;'>📊 Kullanıcı Paneli</h2>",
+                unsafe_allow_html=True)
     st.markdown("---")
-    
-    st.markdown("<h4 style='color: #F5F0EA;'>🔍 Arama Metrikleri</h4>", unsafe_allow_html=True)
-    top_k = st.slider("Önerilecek Kitap Sayısı", min_value=1, max_value=10, value=5)
-    
+
+    st.markdown("<h4 style='color: #F5F0EA;'>🔍 Arama Metrikleri</h4>",
+                unsafe_allow_html=True)
+    top_k = st.slider("Önerilecek Kitap Sayısı",
+                      min_value=1, max_value=10, value=5)
+
     st.markdown("---")
-    st.markdown("<h4 style='color: #F5F0EA;'>🧠 Hibrit Arama Ağırlığı</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #F5F0EA;'>🧠 Hibrit Arama Ağırlığı</h4>",
+                unsafe_allow_html=True)
     st.caption("Anlamsal ve Kelime Bazlı Arama Dengesi:")
-    alpha = st.slider("Ağırlık Katsayısı", min_value=0.0, max_value=1.0, value=0.7, step=0.1)
-    
-    
+    alpha = st.slider("Ağırlık Katsayısı", min_value=0.0,
+                      max_value=1.0, value=0.7, step=0.1)
+
     st.markdown("---")
-    st.markdown("<h4 style='color: #F5F0EA;'>📅 Kitap Dönemi Filtresi</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #F5F0EA;'>📅 Kitap Dönemi Filtresi</h4>",
+                unsafe_allow_html=True)
     current_year = datetime.now().year
-    year_range = st.slider("Yayın Yılı Aralığı", min_value=1800, max_value=current_year, value=(1950, current_year))
-    
+    year_range = st.slider("Yayın Yılı Aralığı", min_value=1800,
+                           max_value=current_year, value=(1950, current_year))
+
     st.markdown("---")
-    st.markdown("<h4 style='color: #E5A93C;'>🛠️ Teknolojik Altyapı</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #E5A93C;'>🛠️ Teknolojik Altyapı</h4>",
+                unsafe_allow_html=True)
     st.markdown("""
     * **Backend:** FastAPI
     * **Vektör Veritabanı:** FAISS
@@ -47,7 +56,8 @@ with st.sidebar:
 # ==========================================
 # ANA SAYFA TASARIMI
 # ==========================================
-st.markdown("<h1 style='text-align: center; color: #E5A93C;'>📚 BookGPT</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #E5A93C;'>📚 BookGPT</h1>",
+            unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #B5A89C; font-style: italic; font-size: 18px;'>Hibrit Kitap Öneri Asistanı</p>", unsafe_allow_html=True)
 st.markdown("---")
 
@@ -89,7 +99,7 @@ st.markdown("<h4 style='color: #E5A93C; margin-bottom: -15px; font-size: 22px;'>
 
 # Girdi alanını session_state değerine bağlıyoruz
 user_query = st.text_input(
-    "", 
+    "",
     value=st.session_state.search_query_val,
     placeholder="Örn: Sürpriz sonlu, felsefi ögeler barındıran akıcı bir distopya romanı...",
     key="recommend_query"
@@ -106,14 +116,14 @@ with col_btn_recommend:
 # ==========================================
 if submit_button:
     # Kullanıcı kutuda manuel değişiklik yaptıysa state güncel kalsın
-    st.session_state.search_query_val = user_query 
-    
+    st.session_state.search_query_val = user_query
+
     if user_query:
         try:
             with st.spinner("🤖 BookGPT derinlemesine arama yapıyor..."):
                 # Backend'e normal kullanıcı sorgusunu ve slider parametrelerini gönderiyoruz
                 response = requests.get(
-                    "http://127.0.0.1:8000/recommend", 
+                    f"{BACKEND_URL}/recommend",
                     params={
                         "query": user_query,
                         "top_k": top_k,
@@ -122,14 +132,14 @@ if submit_button:
                     },
                     timeout=60
                 )
-            
+
             if response.status_code == 200:
                 response_data = response.json()
-                
+
                 # Backend'den (main.py) dönen iki ana yapıyı ayıklıyoruz
                 english_query = response_data.get("search_query_english", "")
                 data = response_data.get("results", [])
-                
+
                 # ========================================================
                 # İSTEDİĞİNİZ ÖZELLİK: FAISS Vektör Arama Analiz Kutusu
                 # ========================================================
@@ -141,20 +151,22 @@ if submit_button:
                     <span style="color: #B5A89C; font-size: 14px;">Aranan Metin:</span> <span style="color: #E5A93C; font-weight: bold; font-size: 15px;">"{english_query}"</span>
                 </div>
                 """, unsafe_allow_html=True)
-                
+
                 # Sonuçların listelenmesi
-                st.markdown(f"<h3 style='color: #E5A93C;'>🎯 Sizin İçin Seçtiğimiz En İyi {len(data)} Kitap:</h3>", unsafe_allow_html=True)
-                
+                st.markdown(
+                    f"<h3 style='color: #E5A93C;'>🎯 Sizin İçin Seçtiğimiz En İyi {len(data)} Kitap:</h3>", unsafe_allow_html=True)
+
                 if isinstance(data, list) and len(data) > 0:
                     for idx, book in enumerate(data, 1):
                         title = book.get("title", "Bilinmeyen Kitap")
                         author = book.get("author", "Bilinmeyen Yazar")
                         genres = book.get("genres", "Belirtilmemiş")
-                        description = book.get("description", "Açıklama bulunmuyor.")
-                        
+                        description = book.get(
+                            "description", "Açıklama bulunmuyor.")
+
                         # Arama detay skorlarını da görmek istersen diye ekledim (isteğe bağlı tutabilirsin)
                         final_score = book.get("final_score", 0)
-                        
+
                         st.markdown(f"""
                         <div style="background-color: #3A3530; padding: 22px; border-radius: 12px; border-left: 6px solid #E5A93C; margin-bottom: 18px; box-shadow: 0px 4px 15px rgba(0,0,0,0.2);">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
