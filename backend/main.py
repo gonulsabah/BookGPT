@@ -1,10 +1,15 @@
+import os
 import faiss
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from sympy import im
 
 # Kendi yazdığınız servisleri import ediyoruz
-from services import search, translator as translator_module
+from backend.services import search, translator as translator_module
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = os.path.join(BASE_DIR, "data")
 
 app = FastAPI(title="BookGPT API")
 
@@ -17,6 +22,7 @@ class LanguageDetectionRequest(BaseModel):
 
 def init_resources():
     """Modelleri ve verileri SADECE ilk istek geldiğinde yükler."""
+
     global bot_translator
 
     if bot_translator is not None:
@@ -35,10 +41,12 @@ def init_resources():
 
         # 2. Verileri Yükle
         print("[2/3] Veritabanı (CSV) okunuyor...")
-        search.books = pd.read_csv("data/prepared_books.csv")
+        search.books = pd.read_csv(
+            os.path.join(DATA_PATH, "prepared_books.csv"))
 
         print("[3/3] FAISS indeksi yükleniyor...")
-        search.index = faiss.read_index("data/books.faiss")
+        search.index = faiss.read_index(
+            os.path.join(DATA_PATH, "books.faiss"))
 
         print("[BAŞARILI] Tüm kaynaklar hafızaya alındı!")
 
