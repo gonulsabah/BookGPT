@@ -16,7 +16,7 @@ def hybrid_book_recommendation(query: str, translator, top_k: int = 5, alpha: fl
     """
 
     # Türkçe -> İngilizce (Dışarıdan gelen translator nesnesini kullanıyoruz)
-    english_query = translator.translate_tr_to_en(query)
+    english_query = translator.translate(query)
 
     # Query embedding
     query_vector = create_embedding(english_query)
