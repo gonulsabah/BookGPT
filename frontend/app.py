@@ -110,7 +110,7 @@ if submit_button:
     
     if user_query:
         try:
-            with st.spinner("🤖 BookGPT derinlemesine semantik arama yapıyor..."):
+            with st.spinner("🤖 BookGPT derinlemesine arama yapıyor..."):
                 # Backend'e normal kullanıcı sorgusunu ve slider parametrelerini gönderiyoruz
                 response = requests.get(
                     "http://127.0.0.1:8000/recommend", 
