@@ -67,14 +67,21 @@ def home():
 def recommend(query: str, top_k: int = 5, alpha: float = 0.7, beta: float = 0.3):
     global bot_translator
 
+    # Modeller yüklenmediyse ilk istekte yükle
     if bot_translator is None:
         init_resources()
 
     try:
-        result_df = search.hybrid_book_recommendation(
-            query, translator=bot_translator, top_k=top_k
-        )
-        return result_df.to_dict(orient="records")
+
+        # 2. ADIM: FAISS hibrit aramasına İngilizceye çevrilmiş sorguyu gönder
+        result_df, english_query = search.hybrid_book_recommendation(  query=query, translator=bot_translator, top_k=top_k, alpha=alpha, beta=beta)
+        
+        # 3. ADIM: Streamlit'in FAISS analizini ekranda gösterebilmesi için 
+        # hem çevrilen metni hem de dataframe kayıtlarını dict olarak dönüyoruz
+        return {
+            "search_query_english": english_query,
+            "results": result_df.to_dict(orient="records")
+        }
 
     except Exception as e:
         raise HTTPException(

@@ -49,4 +49,4 @@ def hybrid_book_recommendation(query: str, translator, top_k: int = 5, alpha: fl
     result_df = pd.DataFrame(results)
     result_df = result_df.sort_values("final_score", ascending=False)
 
-    return result_df.head(top_k)
+    return result_df.head(top_k), english_query
