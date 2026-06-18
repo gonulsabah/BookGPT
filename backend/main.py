@@ -1,12 +1,17 @@
 import os
 import faiss
 import pandas as pd
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from sympy import im
+from langchain.chat_models import init_chat_model
 
 # Kendi yazdığınız servisleri import ediyoruz
-from backend.services import search, translator as translator_module
+from backend.services import search, translator as translator_module, \
+    llm as llm_module
+
+load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data")
@@ -14,6 +19,8 @@ DATA_PATH = os.path.join(BASE_DIR, "data")
 app = FastAPI(title="BookGPT API")
 
 bot_translator = None
+llm = None
+gemini_api_key = os.getenv("GEMINI_API_KEY")
 
 
 class LanguageDetectionRequest(BaseModel):
@@ -50,6 +57,15 @@ def init_resources():
 
         print("[BAŞARILI] Tüm kaynaklar hafızaya alındı!")
 
+        global llm
+
+        llm = init_chat_model(
+            "gemini-2.5-flash-lite",
+            model_provider="google_genai",
+            api_key=gemini_api_key,
+            temperature=0.2
+        )
+
     except Exception as e:
         print(f"Kaynaklar yüklenirken hata oluştu: {e}")
         raise RuntimeError("Modeller yüklenemedi!")
@@ -74,13 +90,15 @@ def recommend(query: str, top_k: int = 5, alpha: float = 0.7, beta: float = 0.3)
     try:
 
         # 2. ADIM: FAISS hibrit aramasına İngilizceye çevrilmiş sorguyu gönder
-        result_df, english_query = search.hybrid_book_recommendation(  query=query, translator=bot_translator, top_k=top_k, alpha=alpha, beta=beta)
-        
-        # 3. ADIM: Streamlit'in FAISS analizini ekranda gösterebilmesi için 
-        # hem çevrilen metni hem de dataframe kayıtlarını dict olarak dönüyoruz
+        result_df, english_query = search.hybrid_book_recommendation(
+            query=query, translator=bot_translator, top_k=top_k, alpha=alpha, beta=beta)
+
+        llm_response = llm_module.recommend_with_explanation(
+            query=query, books=result_df, llm=llm)
         return {
             "search_query_english": english_query,
-            "results": result_df.to_dict(orient="records")
+            "results": result_df.to_dict(orient="records"),
+            "explanation": llm_response
         }
 
     except Exception as e:
