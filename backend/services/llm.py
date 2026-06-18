@@ -1,9 +1,14 @@
+from urllib import response
 
-from math import exp
+from pygments.unistring import No
+from sklearn.utils import resample
+from sympy import im
+
+from .utilize import cached_llm
 
 
 def build_book_context(top_books):
-    """Convert a set of top book rows into a formatted context string."""
+    """Convert top books into prompt context."""
 
     context = ""
 
@@ -17,28 +22,21 @@ def build_book_context(top_books):
             {row['description'][:500]}
 
             ---
-            """
+        """
 
     return context
 
 
 def create_explain_prompt(query, context):
-    """Build the prompt used to generate an explanation for recommended books.
-
-    Args:
-        query: The user's request for book recommendations.
-        context: The formatted book context to include in the prompt.
-
-    Returns:
-        A formatted prompt string for the language model.
-    """
+    """Build LLM prompt for explanation."""
 
     return f"""
         You are a book recommendation assistant.
+
         IMPORTANT:
-        - Always respond in Turkish.
-        - Do not use English unless book titles require it.
-        - Keep explanations natural and fluent.
+        - Always respond in Turkish
+        - Do not use English unless book titles require it
+        - Be natural and concise
 
         User query:
         {query}
@@ -47,40 +45,23 @@ def create_explain_prompt(query, context):
 
         {context}
 
-        Explain why these books match the user's request.
+        Task:
+        Explain why each book matches the request.
 
-        For each book:
-        - mention relevance
-        - mention themes
-        - be concise
-
-        Do not invent information.
-        """
-
-
-def recommend_with_explanation(query, books, llm):
-    """Generate book recommendations with an explanation.
-
-    Args:
-        query: The user's request for book recommendations.
-        books: A dataframe of books to include in the context.
-        llm: The language model used to generate the explanation.
-
-    Returns:
-        A dictionary containing the books and the generated explanation.
+        Rules:
+        - Mention relevance
+        - Mention themes
+        - Do not invent information
     """
 
-    context = build_book_context(
-        books
-    )
 
-    prompt = create_explain_prompt(
-        query,
-        context
-    )
+@cached_llm("gemini-2.5-flash-lite")
+def recommend_with_explanation(query: str, books, llm):
+    """Generate explanation for recommended books."""
+    context = build_book_context(books)
 
-    explanation = llm.invoke(
-        prompt
-    )
+    prompt = create_explain_prompt(query, context)
 
-    return explanation
+    response = llm.invoke(prompt)
+
+    return response

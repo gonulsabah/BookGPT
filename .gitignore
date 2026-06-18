@@ -22,4 +22,6 @@ backend/bookgpt-env/
 *.env.*
 *.__pycache__/
 *.bookgpt
-
+# LLM cache
+llm_cache.db
+*.db

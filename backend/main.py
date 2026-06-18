@@ -10,6 +10,7 @@ from langchain.chat_models import init_chat_model
 # Kendi yazdığınız servisleri import ediyoruz
 from backend.services import search, translator as translator_module, \
     llm as llm_module
+from backend.services.utilize import init_cache_db
 
 load_dotenv()
 
@@ -29,7 +30,7 @@ class LanguageDetectionRequest(BaseModel):
 
 def init_resources():
     """Modelleri ve verileri SADECE ilk istek geldiğinde yükler."""
-
+    init_cache_db()
     global bot_translator
 
     if bot_translator is not None:
@@ -88,7 +89,6 @@ def recommend(query: str, top_k: int = 5, alpha: float = 0.7, beta: float = 0.3)
         init_resources()
 
     try:
-
         # 2. ADIM: FAISS hibrit aramasına İngilizceye çevrilmiş sorguyu gönder
         result_df, english_query = search.hybrid_book_recommendation(
             query=query, translator=bot_translator, top_k=top_k, alpha=alpha, beta=beta)
