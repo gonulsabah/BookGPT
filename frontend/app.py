@@ -2,6 +2,8 @@ import os
 import requests
 import streamlit as st
 from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8080")
 
@@ -110,9 +112,8 @@ col_space1, col_btn_recommend, col_space2 = st.columns([2, 4, 2])
 with col_btn_recommend:
     submit_button = st.button("✨ Bana Kitap Öner", use_container_width=True)
 
-# Öneri İstek Mantığı
 # ==========================================
-# ÖNERİ İSTEK MANTIĞI (GÜNCELLENMİŞ)
+# ÖNERİ İSTEK MANTIĞI
 # ==========================================
 if submit_button:
     # Kullanıcı kutuda manuel değişiklik yaptıysa state güncel kalsın
@@ -136,12 +137,13 @@ if submit_button:
             if response.status_code == 200:
                 response_data = response.json()
 
-                # Backend'den (main.py) dönen iki ana yapıyı ayıklıyoruz
+                # Backend'den (main.py) dönen yapıları ayıklıyoruz
                 english_query = response_data.get("search_query_english", "")
                 data = response_data.get("results", [])
+                explanation = response_data.get("explanation", "")
 
                 # ========================================================
-                # İSTEDİĞİNİZ ÖZELLİK: FAISS Vektör Arama Analiz Kutusu
+                # FAISS Vektör Arama Analiz Kutusu
                 # ========================================================
                 st.markdown(f"""
                 <div style="background-color: #1E232A; padding: 16px; border-radius: 8px; margin-bottom: 25px; border-left: 5px solid #4A90E2; box-shadow: 0px 2px 10px rgba(0,0,0,0.15);">
@@ -152,6 +154,71 @@ if submit_button:
                 </div>
                 """, unsafe_allow_html=True)
 
+                # ========================================================
+                # YAPAY ZEKA ÖNERİ AÇIKLAMASI (GÖRSEL ÖZELLEŞTİRİLMİŞ LLM RESPONSE)
+                # ========================================================
+                if explanation:
+                    st.markdown("<h3 style='color: #E5A93C;'>🤖 BookGPT Yapay Zeka Yorumu</h3>", unsafe_allow_html=True)
+                    
+                    # Eğer gelen veri string değil de bir dictionary ise içinden content'i çek
+                    if isinstance(explanation, dict):
+                        clean_explanation = explanation.get("content", "")
+                    else:
+                        clean_explanation = explanation
+
+                    # İki noktalardan sonra nizami boşluk kalması için düzenleme yapalım
+                    clean_explanation = clean_explanation.replace(":", ": &nbsp;")
+                    clean_explanation = clean_explanation.replace(":  &nbsp;", ": &nbsp;")
+
+                    # Paragrafları ayırıp aralarına hayalet çizgi yerleştirme mekanizması
+                    # Paragrafları ayırıp aralarına hayalet çizgi yerleştirme mekanizması
+                    lines = clean_explanation.split("\n")
+                    formatted_lines = []
+                    ghost_line = "<hr style='border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 15px 0;'>"
+
+                    for line in lines:
+                        clean_line = line.strip()
+                        if not clean_line:
+                            continue
+                        
+                        # 1. Başındaki Markdown liste yıldızını temizle (* )
+                        if clean_line.startswith("* "):
+                            clean_line = clean_line[2:]
+                        elif clean_line.startswith("*"):
+                            clean_line = clean_line[1:]
+                            
+                        # 2. Kalınlık yıldızlarını temizle (**Marvels:** -> Marvels:)
+                        clean_line = clean_line.replace("**", "")
+                        
+                        # "Elbette" ile başlayan giriş cümlesini yakala ve vurgula
+                        if clean_line.startswith("Elbette"):
+                            highlighted_line = f"<p style='font-size: 19px; font-weight: 600; color: #FFE0A3; margin-bottom: 12px;'>{clean_line}</p>"
+                            formatted_lines.append(highlighted_line)
+                        
+                        # Eğer satır kitap maddesiyse (içinde iki nokta barındıran başlık yapısıysa)
+                        elif ":" in clean_line and not clean_line.startswith("Umarım"):
+                            # Satırı başlık ve açıklama olarak ikiye bölüyoruz
+                            parts = clean_line.split(":", 1)
+                            title_part = parts[0].strip()
+                            desc_part = parts[1].strip()
+                            
+                            # Kitap adını kalın ve hafif turuncu/altın tonunda vurguluyoruz
+                            book_item = f"""
+                            <div style='font-size: 16px; line-height: 1.6; color: #F5F0EA;'>
+                                <span style='color: #E5A93C; font-weight: 700; font-size: 17px;'>🔖 {title_part}:</span> &nbsp;{desc_part}
+                            </div>
+                            """
+                            formatted_lines.append(book_item)
+                        else:
+                            # Kapanış cümlesi (Umarım...) veya düz metinleri normal formatta ekle
+                            formatted_lines.append(f"<div style='font-size: 16px; line-height: 1.6; color: #F5F0EA;'>{clean_line}</div>")
+
+                    final_html_explanation = ghost_line.join(formatted_lines)
+
+                    with st.chat_message("assistant"):
+                        st.markdown(final_html_explanation, unsafe_allow_html=True)
+                    st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
+
                 # Sonuçların listelenmesi
                 st.markdown(
                     f"<h3 style='color: #E5A93C;'>🎯 Sizin İçin Seçtiğimiz En İyi {len(data)} Kitap:</h3>", unsafe_allow_html=True)
@@ -161,17 +228,14 @@ if submit_button:
                         title = book.get("title", "Bilinmeyen Kitap")
                         author = book.get("author", "Bilinmeyen Yazar")
                         genres = book.get("genres", "Belirtilmemiş")
-                        description = book.get(
-                            "description", "Açıklama bulunmuyor.")
-
-                        # Arama detay skorlarını da görmek istersen diye ekledim (isteğe bağlı tutabilirsin)
+                        description = book.get("description", "Açıklama bulunmuyor.")
                         final_score = book.get("final_score", 0)
 
                         st.markdown(f"""
                         <div style="background-color: #3A3530; padding: 22px; border-radius: 12px; border-left: 6px solid #E5A93C; margin-bottom: 18px; box-shadow: 0px 4px 15px rgba(0,0,0,0.2);">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <h4 style="margin: 0; color: #FFFFFF; font-size: 19px; font-weight: 700;">{idx}. {title}</h4>
-                                <span style="background-color: #E5A93C; color: #3A3530; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 12px;">Skor: {final_score}</span>
+                                <span style="background-color: #E5A93C; color: #3A3530; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 12px;">Skor: {final_score:.4f}</span>
                             </div>
                             <p style="margin: 6px 0; color: #E5A93C; font-weight: bold; font-size: 14px;">✍️ Yazar: {author} | 🏷️ Tür: {genres}</p>
                             <hr style="border: 0; border-top: 1px solid #4E4741; margin: 12px 0;">
