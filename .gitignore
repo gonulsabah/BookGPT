@@ -17,3 +17,9 @@ __pycache__/
 .venv/
 backend/ubuntu-env/
 backend/bookgpt-env/
+.env/
+*.env
+*.env.*
+*.__pycache__/
+*.bookgpt
+
