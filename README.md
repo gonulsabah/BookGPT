@@ -106,4 +106,4 @@ The system detects the user's query language, translates non-English queries int
 
 ## 📂 Project Structure
 ![alt text](<Screenshot 2026-06-22 at 10.49.52.png>)
-![alt text](<Screenshot 2026-06-22 at 10.49.34.png>)
+![alt text](<Screenshot 2026-06-22 at 10.57.30.png>)
